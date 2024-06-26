@@ -1,0 +1,16 @@
+{
+    "name": "goods-srv",
+    "tags": ["goods-srv","goods"],
+    "host": "127.0.0.1",
+    "mysql": {
+        "host": "127.0.0.1",
+        "port": 3307,
+        "user": "root",
+        "password": "123456",
+        "db": "shop_goods_srv"
+    },
+    "consul": {
+        "host": "127.0.0.1",
+        "port": 8500
+    }
+}
