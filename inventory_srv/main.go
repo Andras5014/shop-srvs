@@ -12,12 +12,11 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"shop_srvs/user_srv/global"
-	"shop_srvs/user_srv/handler"
-	"shop_srvs/user_srv/initialize"
-	"shop_srvs/user_srv/proto"
-	"shop_srvs/user_srv/utils"
-	"shop_srvs/user_srv/utils/register/consul"
+	"shop_srvs/inventory_srv/global"
+	"shop_srvs/inventory_srv/initialize"
+	"shop_srvs/inventory_srv/proto"
+	"shop_srvs/inventory_srv/utils"
+	"shop_srvs/inventory_srv/utils/register/consul"
 	"syscall"
 )
 
@@ -35,7 +34,7 @@ func main() {
 	zap.S().Infof("ip:%s,port:%d", *IP, *Port)
 
 	server := grpc.NewServer()
-	proto.RegisterUserServer(server, &handler.UserServer{})
+	proto.RegisterInventoryServer(server, &proto.UnimplementedInventoryServer{})
 
 	// 注册服务健康检查
 	grpc_health_v1.RegisterHealthServer(server, health.NewServer())
@@ -50,7 +49,6 @@ func main() {
 			log.Fatalf("Failed to serve: %v", err)
 		}
 	}()
-
 	//服务注册
 	register_client := consul.NewRegistryClient(global.ServerConfig.ConsulInfo.Host, global.ServerConfig.ConsulInfo.Port)
 	serviceId := fmt.Sprintf("%s", uuid.New())
@@ -59,6 +57,7 @@ func main() {
 	if err != nil {
 		zap.S().Panic("服务注册失败:", err.Error())
 	}
+	zap.S().Debugf("启动服务注册中心成功, 端口: %d", *Port)
 
 	//接收终止信号
 	quit := make(chan os.Signal)

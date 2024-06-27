@@ -1,7 +1,7 @@
 {
     "name": "goods-srv",
     "tags": ["goods-srv","goods"],
-    "host": "127.0.0.1",
+    "host": "host.docker.internal",
     "mysql": {
         "host": "127.0.0.1",
         "port": 3307,

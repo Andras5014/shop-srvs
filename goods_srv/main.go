@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/hashicorp/consul/api"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -18,12 +17,13 @@ import (
 	"shop_srvs/goods_srv/initialize"
 	"shop_srvs/goods_srv/proto"
 	"shop_srvs/goods_srv/utils"
+	"shop_srvs/goods_srv/utils/register/consul"
 	"syscall"
 )
 
 func main() {
 	IP := flag.String("ip", "0.0.0.0", "ip地址")
-	Port := flag.Int("port", 50051, "端口号")
+	Port := flag.Int("port", 0, "端口号")
 	// 初始化
 	initialize.InitLogger()
 	initialize.InitConfig()
@@ -34,40 +34,7 @@ func main() {
 	}
 	zap.S().Infof("ip:%s,port:%d", *IP, *Port)
 
-	// 服务注册
-	cfg := api.DefaultConfig()
-	consulInfo := global.ServerConfig.ConsulInfo
-	cfg.Address = fmt.Sprintf("%s:%d", consulInfo.Host, consulInfo.Port)
-	var client *api.Client
-	var err error
-	client, err = api.NewClient(cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	// 生成对应检查对象
-	check := &api.AgentServiceCheck{
-		GRPC:                           fmt.Sprintf("host.docker.internal:%d", *Port),
-		Timeout:                        "1s",
-		Interval:                       "5s",
-		DeregisterCriticalServiceAfter: "1m",
-	}
-	// 生成注册对象
-	serviceID := fmt.Sprintf("%s", uuid.New())
-	registration := &api.AgentServiceRegistration{
-		ID:   serviceID,
-		Name: global.ServerConfig.Name,
-		Port: *Port,
-		Tags: global.ServerConfig.Tags,
-		//Address: "host.docker.internal",
-		Address: global.ServerConfig.Host,
-		Check:   check,
-	}
-
-	err = client.Agent().ServiceRegister(registration)
-	if err != nil {
-		panic(err)
-	}
+	zap.S().Debugf("启动服务注册中心成功, 端口: %d", *Port)
 
 	server := grpc.NewServer()
 	proto.RegisterGoodsServer(server, &handler.GoodsServer{})
@@ -86,11 +53,22 @@ func main() {
 		}
 	}()
 
-	// 接收终止信号
+	//服务注册
+	register_client := consul.NewRegistryClient(global.ServerConfig.ConsulInfo.Host, global.ServerConfig.ConsulInfo.Port)
+	serviceId := fmt.Sprintf("%s", uuid.New())
+	err = register_client.Register(global.ServerConfig.Name, serviceId, global.ServerConfig.Host, *Port,
+		global.ServerConfig.Tags)
+	if err != nil {
+		zap.S().Panic("服务注册失败:", err.Error())
+	}
+
+	//接收终止信号
 	quit := make(chan os.Signal)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	if err := client.Agent().ServiceDeregister(serviceID); err != nil {
-		zap.S().Errorw("注销失败", "err", err.Error())
+	if err = register_client.DeRegister(serviceId); err != nil {
+		zap.S().Info("注销失败:", err.Error())
+	} else {
+		zap.S().Info("注销成功:")
 	}
 }

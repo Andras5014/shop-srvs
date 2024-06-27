@@ -1,6 +1,10 @@
-mysql:
-  host: '127.0.0.1'
-  port: 3307
-  user: 'root'
-  password: '123456'
-  db: 'shop_user_srv'
+
+host: '127.0.0.1'
+port: 8848
+namespace: '6ead4d2e-c0ed-46ea-998f-46714f973773'
+data_id: 'user-srv'
+group: 'pro'
+user: 'nacos'
+password: 'nacos'
+
+  '
