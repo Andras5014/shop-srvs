@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"shop_srvs/inventory_srv/global"
+	"shop_srvs/inventory_srv/handler"
 	"shop_srvs/inventory_srv/initialize"
 	"shop_srvs/inventory_srv/proto"
 	"shop_srvs/inventory_srv/utils"
@@ -22,7 +23,7 @@ import (
 
 func main() {
 	IP := flag.String("ip", "0.0.0.0", "ip地址")
-	Port := flag.Int("port", 0, "端口号")
+	Port := flag.Int("port", 50051, "端口号")
 	// 初始化
 	initialize.InitLogger()
 	initialize.InitConfig()
@@ -34,7 +35,7 @@ func main() {
 	zap.S().Infof("ip:%s,port:%d", *IP, *Port)
 
 	server := grpc.NewServer()
-	proto.RegisterInventoryServer(server, &proto.UnimplementedInventoryServer{})
+	proto.RegisterInventoryServer(server, &handler.InventoryServer{})
 
 	// 注册服务健康检查
 	grpc_health_v1.RegisterHealthServer(server, health.NewServer())

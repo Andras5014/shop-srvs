@@ -8,7 +8,7 @@ package model
 type Inventory struct {
 	BaseModel
 	Goods   int32 `gorm:"type:int;index;not null;default:0" json:"goods"`
-	Stocks  int32 `gorm:"type:int;not null;default:0" json:"stocks"`
+	Stocks  int32 `gorm:"type:int;not null;default:0" json:"stocks"`  // 库存数
 	Version int32 `gorm:"type:int;not null;default:0" json:"version"` // 乐观锁
 }
 
