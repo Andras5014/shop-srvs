@@ -19,6 +19,7 @@ import (
 	"shop_srvs/inventory_srv/utils"
 	"shop_srvs/inventory_srv/utils/register/consul"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -28,6 +29,7 @@ func main() {
 	initialize.InitLogger()
 	initialize.InitConfig()
 	initialize.InitDB()
+	initialize.InitRedSync()
 	flag.Parse()
 	if *Port == 0 {
 		*Port, _ = utils.GetFreePort()
@@ -43,7 +45,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
+	//
+	//go testRedSync()
 	// 启动 gRPC 服务器
 	go func() {
 		if err := server.Serve(lis); err != nil {
@@ -69,4 +72,26 @@ func main() {
 	} else {
 		zap.S().Info("注销成功:")
 	}
+}
+
+func testRedSync() {
+	log.Println("enter testRed")
+	mu := global.Redsync.NewMutex("test2")
+	if err := mu.Lock(); err != nil {
+		log.Println("lock test2 failed", err)
+	} else {
+		log.Println("lock test2 success")
+		defer mu.Unlock()
+	}
+
+	time.Sleep(time.Second)
+
+	mu1 := global.Redsync.NewMutex("test2")
+	if err := mu1.Lock(); err != nil {
+		log.Println("relock test2 failed", err)
+	} else {
+		log.Println("relock test2 success")
+		defer mu1.Unlock()
+	}
+	log.Println("end testRed")
 }

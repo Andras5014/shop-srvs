@@ -33,14 +33,13 @@ func TestInvDetail(goodsId int32) {
 	fmt.Println(rsp.Num)
 }
 
-var lock sync.Mutex
+var num = 0
 
 func TestSell(wg *sync.WaitGroup) {
 	/*
 	   1. 第一件扣减成功： 第二件： 1. 没有库存信息 2. 库存不足
 	   2. 两件都扣减成功
 	*/
-	lock.Lock()
 	defer wg.Done()
 	_, err := invClient.Sell(context.Background(), &proto.SellInfo{
 		GoodsInfo: []*proto.GoodsInvInfo{
@@ -48,11 +47,11 @@ func TestSell(wg *sync.WaitGroup) {
 			//{GoodsId: 422, Num: 30},
 		},
 	})
-	defer lock.Unlock()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("库存扣减成功")
+	num++
+	fmt.Println("库存扣减成功", num)
 }
 
 func TestReback() {
@@ -84,20 +83,20 @@ func main() {
 	//  TestSetInv(i, 100)
 	//}
 	//并发情况之下 库存无法正确的扣减
-	//var wg sync.WaitGroup
-	//wg.Add(20)
-	//for i := 0; i < 20; i++ {
-	//	go TestSell(&wg)
-	//}
-	//
-	//wg.Wait()
-	var i int32
-	for i = 421; i < 841; i++ {
-		TestSetInv(i, 100)
+	var wg sync.WaitGroup
+	wg.Add(20)
+	for i := 0; i < 20; i++ {
+		go TestSell(&wg)
 	}
+
+	wg.Wait()
+	//var i int32
+	//for i = 421; i < 841; i++ {
+	//	TestSetInv(i, 100)
+	//}
 	//TestInvDetail(421)
 	//TestSell()
 	//TestReback()
-	//conn.Close()
+	conn.Close()
 
 }

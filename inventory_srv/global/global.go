@@ -1,6 +1,7 @@
 package global
 
 import (
+	"github.com/go-redsync/redsync/v4"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -12,6 +13,7 @@ import (
 
 var (
 	DB           *gorm.DB
+	Redsync      *redsync.Redsync
 	ServerConfig *config.ServerConfig
 	NacosConfig  *config.NacosConfig
 )
