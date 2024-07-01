@@ -78,3 +78,40 @@
 2024-06-29T03:05:03.900+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
 2024-06-29T13:45:54.684+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
 2024-06-29T13:47:51.680+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-06-30T13:58:30.261+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T01:32:28.155+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T01:32:40.583+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T01:32:40.590+0800	[31mERROR[0m	nacos_server/nacos_server.go:199	api</v1/cs/configs>,method:<GET>, params:<{"dataId":"order-srv","group":"dev","tenant":"2c2f2683-7102-488c-889c-3e56de372715"}>, call domain error:<[404] config data not exist
+> , result:<config data not exist
+>
+2024-07-02T01:32:40.595+0800	[31mERROR[0m	nacos_server/nacos_server.go:199	api</v1/cs/configs>,method:<GET>, params:<{"dataId":"order-srv","group":"dev","tenant":"2c2f2683-7102-488c-889c-3e56de372715"}>, call domain error:<[404] config data not exist
+> , result:<config data not exist
+>
+2024-07-02T01:32:40.598+0800	[31mERROR[0m	nacos_server/nacos_server.go:199	api</v1/cs/configs>,method:<GET>, params:<{"dataId":"order-srv","group":"dev","tenant":"2c2f2683-7102-488c-889c-3e56de372715"}>, call domain error:<[404] config data not exist
+> , result:<config data not exist
+>
+2024-07-02T01:32:40.598+0800	[31mERROR[0m	config_client/config_client.go:202	get config from server error:[404] config data not exist
+ 
+2024-07-02T01:32:40.598+0800	[33mWARN[0m	config_client/config_client.go:207	[client.GetConfig] config not found, dataId: order-srv, group: dev, namespaceId: 2c2f2683-7102-488c-889c-3e56de372715.
+2024-07-02T01:34:28.904+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T01:34:28.910+0800	[31mERROR[0m	nacos_server/nacos_server.go:199	api</v1/cs/configs>,method:<GET>, params:<{"dataId":"order-srv","group":"dev","tenant":"2c2f2683-7102-488c-889c-3e56de372715"}>, call domain error:<[404] config data not exist
+> , result:<config data not exist
+>
+2024-07-02T01:34:28.915+0800	[31mERROR[0m	nacos_server/nacos_server.go:199	api</v1/cs/configs>,method:<GET>, params:<{"dataId":"order-srv","group":"dev","tenant":"2c2f2683-7102-488c-889c-3e56de372715"}>, call domain error:<[404] config data not exist
+> , result:<config data not exist
+>
+2024-07-02T01:34:28.920+0800	[31mERROR[0m	nacos_server/nacos_server.go:199	api</v1/cs/configs>,method:<GET>, params:<{"dataId":"order-srv","group":"dev","tenant":"2c2f2683-7102-488c-889c-3e56de372715"}>, call domain error:<[404] config data not exist
+> , result:<config data not exist
+>
+2024-07-02T01:34:28.920+0800	[31mERROR[0m	config_client/config_client.go:202	get config from server error:[404] config data not exist
+ 
+2024-07-02T01:34:28.921+0800	[33mWARN[0m	config_client/config_client.go:207	[client.GetConfig] config not found, dataId: order-srv, group: dev, namespaceId: 2c2f2683-7102-488c-889c-3e56de372715.
+2024-07-02T01:35:57.394+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T01:36:36.757+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T01:54:04.096+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T01:55:56.857+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T01:57:04.548+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T02:00:08.477+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T02:05:27.357+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T02:05:33.064+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>
+2024-07-02T02:05:43.076+0800	[34mINFO[0m	clients/client_factory.go:47	logDir:<tmp/nacos/log>   cacheDir:<tmp/nacos/cache>

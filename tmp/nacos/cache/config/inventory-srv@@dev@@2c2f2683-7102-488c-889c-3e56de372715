@@ -1,0 +1,20 @@
+{
+    "name": "inventory-srv",
+    "tags": ["inventory-srv","inventory"],
+    "host": "host.docker.internal",
+    "mysql": {
+        "host": "127.0.0.1",
+        "port": 3307,
+        "user": "root",
+        "password": "123456",
+        "db": "shop_inventory_srv"
+    },
+    "redis": {
+        "host": "127.0.0.1",
+        "port": 6379
+    },
+    "consul": {
+        "host": "127.0.0.1",
+        "port": 8500
+    }
+}

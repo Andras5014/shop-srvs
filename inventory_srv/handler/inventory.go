@@ -131,7 +131,7 @@ func (*InventoryServer) Sell(ctx context.Context, req *proto.SellInfo) (*emptypb
 		if ok, err := mutex.Unlock(); !ok || err != nil {
 			return nil, status.Errorf(codes.Internal, "释放redis分布式锁异常")
 		}
-		//update inventory set stocks = stocks-1, version=version+1 where goods=goods and version=version
+		//update order set stocks = stocks-1, version=version+1 where goods=goods and version=version
 		//这种写法有瑕疵，为什么？
 		//零值 对于int类型来说 默认值是0 这种会被gorm给忽略掉
 		//if result := tx.Model(&model.Inventory{}).Select("Stocks", "Version").Where("goods = ? and version= ?", goodInfo.GoodsId, inv.Version).Updates(model.Inventory{Stocks: inv.Stocks, Version: inv.Version+1}); result.RowsAffected == 0 {

@@ -7,6 +7,7 @@ require (
 	github.com/go-redsync/redsync/v4 v4.13.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.28.2
+	github.com/mbobakov/grpc-consul-resolver v1.5.3
 	github.com/nacos-group/nacos-sdk-go v1.1.4
 	github.com/redis/go-redis/v9 v9.5.3
 	github.com/spf13/viper v1.19.0
@@ -24,9 +25,10 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/fatih/color v1.14.1 // indirect
+	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
+	github.com/go-playground/form v3.1.4+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -41,10 +43,11 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
+	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

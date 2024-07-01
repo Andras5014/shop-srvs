@@ -1,0 +1,23 @@
+{
+    "name": "order-srv",
+    "tags": ["order-srv","user"],
+     "host": "host.docker.internal",
+    "mysql": {
+        "host": "127.0.0.1",
+        "port": 3307,
+        "user": "root",
+        "password": "123456",
+        "db": "shop_order_srv"
+    },
+   
+    "consul": {
+        "host": "127.0.0.1",
+        "port": 8500
+    },
+     "goods_srv": {
+        "name": "goods-srv"
+    },
+    "inventory_srv": {
+        "name": "inventory-srv"
+    }
+}

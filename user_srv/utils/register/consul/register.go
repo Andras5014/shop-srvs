@@ -40,7 +40,7 @@ func (r *Registry) Register(name, id, address string, port int, tags []string) e
 	registration := &api.AgentServiceRegistration{
 		ID:      id,
 		Name:    name,
-		Port:    8029,
+		Port:    port,
 		Tags:    tags,
 		Address: "127.0.0.1",
 		Check:   check,
