@@ -1,0 +1,16 @@
+{
+    "name": "userop-srv",
+    "tags": ["userop-srv","user"],
+     "host": "host.docker.internal",
+    "mysql": {
+        "host": "127.0.0.1",
+        "port": 3307,
+        "user": "root",
+        "password": "123456",
+        "db": "shop_userop_srv"
+    },
+    "consul": {
+        "host": "127.0.0.1",
+        "port": 8500
+    }
+}
