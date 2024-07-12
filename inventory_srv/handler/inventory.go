@@ -152,7 +152,7 @@ func (i *InventoryServer) InvDetail(ctx context.Context, in *proto.GoodsInvInfo)
 //	return &emptypb.Empty{}, nil
 //}
 
-// 读未提交
+// 全交给数据库
 func (i *InventoryServer) Sell(ctx context.Context, in *proto.SellInfo) (*emptypb.Empty, error) {
 	// 开始一个事务
 
@@ -228,16 +228,15 @@ func AutoReback(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.Co
 			return consumer.ConsumeSuccess, nil
 		}
 
-		//去将inv的库存加回去 将selldetail的status设置为2， 要在事务中进行
+		//去将inv的库存加回去 将selldetail的status设置为2 要在事务中进行
 		tx := global.DB.Begin()
 		var sellDetail model.StockSellDetail
 		if result := tx.Model(&model.StockSellDetail{}).Where(&model.StockSellDetail{OrderSn: orderInfo.OrderSn, Status: 1}).First(&sellDetail); result.RowsAffected == 0 {
 			return consumer.ConsumeSuccess, nil
 		}
-		//如果查询到那么逐个归还库存
+		//那么逐个归还库存
 		for _, orderGood := range sellDetail.Detail {
-			//update怎么用
-			//先查询一下inventory表在， update语句的 update xx set stocks=stocks+2
+			// update语句的 update xx set stocks=stocks+2
 			if result := tx.Model(&model.Inventory{}).Where(&model.Inventory{Goods: orderGood.Goods}).Update("stocks", gorm.Expr("stocks+?", orderGood.Num)); result.RowsAffected == 0 {
 				tx.Rollback()
 				return consumer.ConsumeRetryLater, nil

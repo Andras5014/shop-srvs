@@ -177,9 +177,7 @@ func (g *GoodsServer) CreateGoods(ctx context.Context, info *proto.CreateGoodsIn
 	if result := global.DB.First(&brand, info.BrandId); result.RowsAffected == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "品牌不存在")
 	}
-	//先检查redis中是否有这个token
-	//防止同一个token的数据重复插入到数据库中，如果redis中没有这个token则放入redis
-	//这里没有看到图片文件是如何上传， 在微服务中 普通的文件上传已经不再使用
+
 	goods := model.Goods{
 		Brands:          brand,
 		BrandsID:        brand.ID,

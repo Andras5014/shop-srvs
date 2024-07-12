@@ -26,9 +26,8 @@ func Paginate(page, pageSize int) func(db *gorm.DB) *gorm.DB {
 }
 func GenerateOrderSn(userId int32) string {
 	//订单号的生成规则
-	/*
-	   年月日时分秒+用户id+2位随机数
-	*/
+	//年月日时分秒+用户id+2位随机数
+
 	now := time.Now()
 	rand.Seed(time.Now().UnixNano())
 	orderSn := fmt.Sprintf("%d%d%d%d%d%d%d%d",
