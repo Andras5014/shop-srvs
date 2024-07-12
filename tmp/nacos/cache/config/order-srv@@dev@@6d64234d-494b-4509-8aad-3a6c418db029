@@ -19,5 +19,10 @@
     },
     "inventory_srv": {
         "name": "inventory-srv"
+    },
+      "jaeger": {
+        "host": "127.0.0.1",
+        "port": 6831,
+        "name":"order_srv"
     }
 }

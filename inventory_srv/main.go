@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/apache/rocketmq-client-go/v2"
+	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -24,7 +26,7 @@ import (
 
 func main() {
 	IP := flag.String("ip", "0.0.0.0", "ip地址")
-	Port := flag.Int("port", 0, "端口号")
+	Port := flag.Int("port", 50051, "端口号")
 	// 初始化
 	initialize.InitLogger()
 	initialize.InitConfig()
@@ -63,10 +65,21 @@ func main() {
 	}
 	zap.S().Debugf("启动服务注册中心成功, 端口: %d", *Port)
 
+	//// 监听库存归还topic
+	c, _ := rocketmq.NewPushConsumer(
+		consumer.WithNameServer([]string{"127.0.0.1"}),
+		consumer.WithGroupName("shop-inventory"),
+	)
+	if err := c.Subscribe("order_reback", consumer.MessageSelector{}, handler.AutoReback); err != nil {
+		fmt.Println("读取消息失败", err)
+	}
+	_ = c.Start()
+
 	//接收终止信号
 	quit := make(chan os.Signal)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	_ = c.Shutdown()
 	if err = register_client.DeRegister(serviceId); err != nil {
 		zap.S().Info("注销失败:", err.Error())
 	} else {

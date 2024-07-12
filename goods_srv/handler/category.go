@@ -56,15 +56,16 @@ func (g *GoodsServer) GetSubCategory(ctx context.Context, request *proto.Categor
 }
 
 func (g *GoodsServer) CreateCategory(ctx context.Context, request *proto.CategoryInfoRequest) (*proto.CategoryInfoResponse, error) {
-	category := model.Category{
-		Name:  request.Name,
-		Level: request.Level,
-		IsTab: request.IsTab,
+	category := model.Category{}
+	cMap := map[string]interface{}{
+		"name":   request.Name,
+		"level":  request.Level,
+		"is_tab": request.IsTab,
 	}
 	if request.Level != 1 {
-		category.ParentCategoryID = request.ParentCategory
+		cMap["parent_category_id"] = request.ParentCategory
 	}
-	global.DB.Save(&category)
+	global.DB.Model(&model.Category{}).Create(cMap)
 	return &proto.CategoryInfoResponse{Id: category.ID}, nil
 
 }
@@ -84,15 +85,16 @@ func (g *GoodsServer) UpdateCategory(ctx context.Context, request *proto.Categor
 	if request.Name != "" {
 		category.Name = request.Name
 	}
-	if request.Level != 0 {
-		category.Level = request.Level
+
+	category.IsTab = request.IsTab
+
+	cMap := map[string]interface{}{
+		"name":   category.Name,
+		"is_tab": category.IsTab,
 	}
-	if request.IsTab {
-		category.IsTab = request.IsTab
+	res := global.DB.Model(&model.Category{}).Where("id = ?", request.Id).Updates(cMap)
+	if res.Error != nil {
+		return nil, status.Errorf(codes.Internal, "更新失败")
 	}
-	if request.ParentCategory != 0 {
-		category.ParentCategoryID = request.ParentCategory
-	}
-	global.DB.Save(&category)
 	return &emptypb.Empty{}, nil
 }

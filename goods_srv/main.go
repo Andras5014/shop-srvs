@@ -28,6 +28,7 @@ func main() {
 	initialize.InitLogger()
 	initialize.InitConfig()
 	initialize.InitDB()
+	initialize.InitEs()
 	flag.Parse()
 	if *Port == 0 {
 		*Port, _ = utils.GetFreePort()

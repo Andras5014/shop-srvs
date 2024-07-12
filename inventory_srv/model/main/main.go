@@ -38,6 +38,6 @@ func main() {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db.AutoMigrate(&model.Inventory{})
+	db.AutoMigrate(&model.Inventory{}, &model.StockSellDetail{})
 
 }

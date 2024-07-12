@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"shop_srvs/inventory_srv/proto"
 	"sync"
+	"time"
 )
 
 var invClient proto.InventoryClient
@@ -33,8 +34,6 @@ func TestInvDetail(goodsId int32) {
 	fmt.Println(rsp.Num)
 }
 
-var num = 0
-
 func TestSell(wg *sync.WaitGroup) {
 	/*
 	   1. 第一件扣减成功： 第二件： 1. 没有库存信息 2. 库存不足
@@ -50,8 +49,24 @@ func TestSell(wg *sync.WaitGroup) {
 	if err != nil {
 		panic(err)
 	}
-	num++
-	fmt.Println("库存扣减成功", num)
+
+}
+func TestSell1() {
+	/*
+	   1. 第一件扣减成功： 第二件： 1. 没有库存信息 2. 库存不足
+	   2. 两件都扣减成功
+	*/
+	
+	_, err := invClient.Reback(context.Background(), &proto.SellInfo{
+		GoodsInfo: []*proto.GoodsInvInfo{
+			{GoodsId: 421, Num: 1},
+			//{GoodsId: 422, Num: 30},
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 func TestReback() {
@@ -85,11 +100,13 @@ func main() {
 	//并发情况之下 库存无法正确的扣减
 	var wg sync.WaitGroup
 	wg.Add(20)
-	for i := 0; i < 20; i++ {
+	time1 := time.Now()
+	go TestSell1()
+	for i := 0; i < 19; i++ {
 		go TestSell(&wg)
 	}
-
 	wg.Wait()
+	fmt.Println("耗时：", time.Since(time1))
 	//var i int32
 	//for i = 421; i < 841; i++ {
 	//	TestSetInv(i, 100)

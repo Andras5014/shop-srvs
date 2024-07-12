@@ -2,13 +2,14 @@ package handler
 
 import (
 	"context"
-	"fmt"
-	"github.com/go-redsync/redsync/v4"
-	"github.com/go-redsync/redsync/v4/redis/goredis/v9"
-	"github.com/redis/go-redis/v9"
+	"encoding/json"
+	"github.com/apache/rocketmq-client-go/v2/consumer"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"shop_srvs/inventory_srv/global"
 	"shop_srvs/inventory_srv/model"
@@ -43,115 +44,159 @@ func (i *InventoryServer) InvDetail(ctx context.Context, in *proto.GoodsInvInfo)
 
 //func (i *InventoryServer) Sell(ctx context.Context, in *proto.SellInfo) (*emptypb.Empty, error) {
 //	tx := global.DB.Begin()
+//	tx.Set("gorm:query_option", "FOR UPDATE") // 悲观锁
 //	for _, goodInfo := range in.GoodsInfo {
 //		var inv model.Inventory
-//		for {
-//			if result := tx.Where("goods = ?", goodInfo.GoodsId).First(&inv); result.RowsAffected == 0 {
-//				tx.Rollback()
-//				return nil, status.Errorf(codes.NotFound, "库存信息不存在")
-//			}
-//			if inv.Stocks < goodInfo.Num {
-//
-//				tx.Rollback()
-//				return nil, status.Errorf(codes.OutOfRange, "库存不足")
-//			}
-//
-//			inv.Stocks -= goodInfo.Num
-//			if result := tx.Model(&model.Inventory{}).Select("stocks", "version").
-//				Where("goods = ? and version = ?", goodInfo.GoodsId, inv.Version).
-//				Updates(&model.Inventory{Stocks: inv.Stocks, Version: inv.Version + 1}); result.RowsAffected == 0 {
-//				zap.S().Infof("更新失败")
-//			} else {
-//				break
-//			}
-//
+//		if err := tx.Where("goods = ?", goodInfo.GoodsId).First(&inv).Error; err != nil {
+//			tx.Rollback()
+//			return nil, status.Errorf(codes.NotFound, "库存信息不存在")
 //		}
-//		tx.Save(&inv)
+//
+//		if inv.Stocks < goodInfo.Num {
+//			tx.Rollback()
+//			return nil, status.Errorf(codes.ResourceExhausted, "库存不足")
+//		}
+//
+//		inv.Stocks -= goodInfo.Num
+//		if err := tx.Save(&inv).Error; err != nil {
+//			tx.Rollback()
+//			return nil, status.Errorf(codes.Internal, "更新库存失败")
+//		}
 //	}
 //
 //	if err := tx.Commit().Error; err != nil {
 //		tx.Rollback()
-//		return nil, status.Errorf(codes.Internal, "事务提交失败")
+//		return nil, status.Errorf(codes.Internal, "事务提交失败: %v", err)
+//	}
+//	return &emptypb.Empty{}, nil
+//}
+
+// 可重复读 全部商品加锁
+//func (*InventoryServer) Sell(ctx context.Context, req *proto.SellInfo) (*emptypb.Empty, error) {
+//	// 初始化一个用于存放所有商品锁的slice
+//	var mutexes []*redsync.Mutex
+//
+//	// 首先获取所有商品的分布式锁
+//	for _, goodInfo := range req.GoodsInfo {
+//		mutex := global.Redsync.NewMutex(fmt.Sprintf("goods_%d", goodInfo.GoodsId))
+//		if err := mutex.Lock(); err != nil {
+//			// 如果获取锁失败，则释放之前获取的所有锁
+//			for _, m := range mutexes {
+//				m.Unlock()
+//			}
+//			return nil, status.Errorf(codes.Internal, "获取redis分布式锁异常: %v", err)
+//		}
+//		// 将锁添加到列表中
+//		mutexes = append(mutexes, mutex)
+//	}
+//
+//	// 开始数据库事务
+//	tx := global.DB.Begin()
+//
+//	sellDetail := model.StockSellDetail{
+//		OrderSn: req.OrderSn,
+//		Status:  1,
+//	}
+//	var details []model.GoodsDetail
+//
+//	// 处理每个商品的库存扣减
+//	for _, goodInfo := range req.GoodsInfo {
+//		details = append(details, model.GoodsDetail{
+//			Goods: goodInfo.GoodsId,
+//			Num:   goodInfo.Num,
+//		})
+//
+//		var inv model.Inventory
+//		if result := global.DB.Where(&model.Inventory{Goods: goodInfo.GoodsId}).First(&inv); result.RowsAffected == 0 {
+//			tx.Rollback()
+//			// 在返回前释放所有锁
+//			for _, m := range mutexes {
+//				m.Unlock()
+//			}
+//			return nil, status.Errorf(codes.InvalidArgument, "没有库存信息")
+//		}
+//		if inv.Stocks < goodInfo.Num {
+//			tx.Rollback()
+//			for _, m := range mutexes {
+//				m.Unlock()
+//			}
+//			return nil, status.Errorf(codes.ResourceExhausted, "库存不足")
+//		}
+//		inv.Stocks -= goodInfo.Num
+//		tx.Save(&inv)
+//	}
+//
+//	sellDetail.Detail = details
+//	if result := tx.Create(&sellDetail); result.RowsAffected == 0 {
+//		tx.Rollback()
+//		for _, m := range mutexes {
+//			m.Unlock()
+//		}
+//		return nil, status.Errorf(codes.Internal, "保存库存扣减历史失败")
+//	}
+//
+//	// 提交事务
+//	if result := tx.Commit(); result.Error != nil {
+//		tx.Rollback()
+//		for _, m := range mutexes {
+//			m.Unlock()
+//		}
+//		return nil, status.Errorf(codes.Internal, "事务提交失败: %v", result.Error)
+//	}
+//
+//	// 释放所有锁
+//	for _, m := range mutexes {
+//		m.Unlock()
 //	}
 //
 //	return &emptypb.Empty{}, nil
 //}
 
-func (*InventoryServer) Sell(ctx context.Context, req *proto.SellInfo) (*emptypb.Empty, error) {
-	//扣减库存， 本地事务 [1:10,  2:5, 3: 20]
-	//数据库基本的一个应用场景：数据库事务
-	//并发情况之下 可能会出现超卖 1
-	client := redis.NewClient(&redis.Options{
-		Addr: "127.0.0.1:6379",
-	})
-	pool := goredis.NewPool(client) // or, pool := redigo.NewPool(...)
-	rs := redsync.New(pool)
+// 读未提交
+func (i *InventoryServer) Sell(ctx context.Context, in *proto.SellInfo) (*emptypb.Empty, error) {
+	// 开始一个事务
 
 	tx := global.DB.Begin()
-	//m.Lock() //获取锁 这把锁有问题吗？  假设有10w的并发， 这里并不是请求的同一件商品  这个锁就没有问题了吗？
-
-	//这个时候应该先查询表，然后确定这个订单是否已经扣减过库存了，已经扣减过了就别扣减了
-	//并发时候会有漏洞， 同一个时刻发送了重复了多次， 使用锁，分布式锁
-	//sellDetail := model.StockSellDetail{
-	//	OrderSn: req.OrderSn,
-	//	Status:  1,
-	//}
-	//var details []model.GoodsDetail
-	for _, goodInfo := range req.GoodsInfo {
-		//details = append(details, model.GoodsDetail{
-		//	Goods: goodInfo.GoodsId,
-		//	Num: goodInfo.Num,
-		//})
-
-		var inv model.Inventory
-		//if result := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where(&model.Inventory{Goods:goodInfo.GoodsId}).First(&inv); result.RowsAffected == 0 {
-		//  tx.Rollback() //回滚之前的操作
-		//  return nil, status.Errorf(codes.InvalidArgument, "没有库存信息")
-		//}
-
-		//for {
-		mutex := rs.NewMutex(fmt.Sprintf("goods_%d", goodInfo.GoodsId))
-		if err := mutex.Lock(); err != nil {
-			return nil, status.Errorf(codes.Internal, "获取redis分布式锁异常")
-		}
-
-		if result := global.DB.Where(&model.Inventory{Goods: goodInfo.GoodsId}).First(&inv); result.RowsAffected == 0 {
-			tx.Rollback() //回滚之前的操作
-			return nil, status.Errorf(codes.InvalidArgument, "没有库存信息")
-		}
-		//判断库存是否充足
-		if inv.Stocks < goodInfo.Num {
-			tx.Rollback() //回滚之前的操作
-			return nil, status.Errorf(codes.ResourceExhausted, "库存不足")
-		}
-		//扣减， 会出现数据不一致的问题 - 锁，分布式锁
-		inv.Stocks -= goodInfo.Num
-		tx.Save(&inv)
-
-		if ok, err := mutex.Unlock(); !ok || err != nil {
-			return nil, status.Errorf(codes.Internal, "释放redis分布式锁异常")
-		}
-		//update order set stocks = stocks-1, version=version+1 where goods=goods and version=version
-		//这种写法有瑕疵，为什么？
-		//零值 对于int类型来说 默认值是0 这种会被gorm给忽略掉
-		//if result := tx.Model(&model.Inventory{}).Select("Stocks", "Version").Where("goods = ? and version= ?", goodInfo.GoodsId, inv.Version).Updates(model.Inventory{Stocks: inv.Stocks, Version: inv.Version+1}); result.RowsAffected == 0 {
-		//  zap.S().Info("库存扣减失败")
-		//}else{
-		//  break
-		//}
-		//}
-		//tx.Save(&inv)
+	sellDetail := model.StockSellDetail{
+		OrderSn: in.OrderSn,
+		Status:  1,
 	}
-	//sellDetail.Detail = details
-	////写selldetail表
-	//if result := tx.Create(&sellDetail); result.RowsAffected == 0 {
-	//	tx.Rollback()
-	//	return nil, status.Errorf(codes.Internal, "保存库存扣减历史失败")
-	//}
-	tx.Commit() // 需要自己手动提交操作
-	//m.Unlock() //释放锁
+	var details []model.GoodsDetail
+	if tx.Error != nil {
+		return nil, status.Errorf(codes.Internal, "无法开始事务: %v", tx.Error)
+	}
+
+	for _, goodInfo := range in.GoodsInfo {
+		// 执行更新库存的 SQL 语句
+		details = append(details, model.GoodsDetail{
+			Goods: goodInfo.GoodsId,
+			Num:   goodInfo.Num,
+		})
+		result := tx.Exec("UPDATE inventories SET stocks = stocks - ? WHERE goods = ? AND stocks - ?>0", goodInfo.Num, goodInfo.GoodsId, goodInfo.Num)
+		if result.Error != nil {
+			tx.Rollback()
+			return nil, status.Errorf(codes.Internal, "更新库存失败: %v", result.Error)
+		}
+		// 检查是否有行受影响，如果没有则说明库存不足
+		if result.RowsAffected == 0 {
+			tx.Rollback()
+			return nil, status.Errorf(codes.ResourceExhausted, "库存不足，商品ID: %d", goodInfo.GoodsId)
+		}
+	}
+	sellDetail.Detail = details
+	if result := tx.Create(&sellDetail); result.RowsAffected == 0 {
+		tx.Rollback()
+		return nil, status.Errorf(codes.Internal, "保存库存扣减历史失败")
+	}
+	// 尝试提交事务
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return nil, status.Errorf(codes.Internal, "事务提交失败: %v", err)
+	}
+
 	return &emptypb.Empty{}, nil
 }
+
 func (i *InventoryServer) Reback(ctx context.Context, in *proto.SellInfo) (*emptypb.Empty, error) {
 	// 库存归还 1、订单超时 2、订单创建失败取消
 	tx := global.DB.Begin()
@@ -167,6 +212,46 @@ func (i *InventoryServer) Reback(ctx context.Context, in *proto.SellInfo) (*empt
 	}
 	tx.Commit()
 	return &emptypb.Empty{}, nil
+}
+
+func AutoReback(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
+	type OrderInfo struct {
+		OrderSn string
+	}
+	for i := range msgs {
+
+		// 新建一张表， 这张表记录了详细的订单扣减细节，以及归还细节
+		var orderInfo OrderInfo
+		err := json.Unmarshal(msgs[i].Body, &orderInfo)
+		if err != nil {
+			zap.S().Errorf("解析json失败： %v\n", msgs[i].Body)
+			return consumer.ConsumeSuccess, nil
+		}
+
+		//去将inv的库存加回去 将selldetail的status设置为2， 要在事务中进行
+		tx := global.DB.Begin()
+		var sellDetail model.StockSellDetail
+		if result := tx.Model(&model.StockSellDetail{}).Where(&model.StockSellDetail{OrderSn: orderInfo.OrderSn, Status: 1}).First(&sellDetail); result.RowsAffected == 0 {
+			return consumer.ConsumeSuccess, nil
+		}
+		//如果查询到那么逐个归还库存
+		for _, orderGood := range sellDetail.Detail {
+			//update怎么用
+			//先查询一下inventory表在， update语句的 update xx set stocks=stocks+2
+			if result := tx.Model(&model.Inventory{}).Where(&model.Inventory{Goods: orderGood.Goods}).Update("stocks", gorm.Expr("stocks+?", orderGood.Num)); result.RowsAffected == 0 {
+				tx.Rollback()
+				return consumer.ConsumeRetryLater, nil
+			}
+		}
+
+		if result := tx.Model(&model.StockSellDetail{}).Where(&model.StockSellDetail{OrderSn: orderInfo.OrderSn}).Update("status", 2); result.RowsAffected == 0 {
+			tx.Rollback()
+			return consumer.ConsumeRetryLater, nil
+		}
+		tx.Commit()
+		return consumer.ConsumeSuccess, nil
+	}
+	return consumer.ConsumeSuccess, nil
 }
 func (i *InventoryServer) mustEmbedUnimplementedInventoryServer() {
 

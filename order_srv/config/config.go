@@ -16,6 +16,11 @@ type ConsulConfig struct {
 	Host string `mapstructure:"host" json:"host"`
 	Port int    `mapstructure:"port" json:"port"`
 }
+type JaegerConfig struct {
+	Name string `mapstructure:"name" json:"name"`
+	Host string `mapstructure:"host" json:"host"`
+	Port int    `mapstructure:"port" json:"port"`
+}
 type NacosConfig struct {
 	Host      string `mapstructure:"host" json:"host"`
 	Port      int    `mapstructure:"port" json:"port"`
@@ -44,4 +49,5 @@ type ServerConfig struct {
 	ConsulInfo          ConsulConfig          `mapstructure:"consul" json:"consul"`
 	GoodsServerInfo     GoodsServerConfig     `mapstructure:"goods_srv" json:"goods_srv"`
 	InventoryServerInfo InventoryServerConfig `mapstructure:"inventory_srv" json:"inventory_srv"`
+	JaegerInfo          JaegerConfig          `mapstructure:"jaeger" json:"jaeger"`
 }

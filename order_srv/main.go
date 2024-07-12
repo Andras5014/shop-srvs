@@ -3,7 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/apache/rocketmq-client-go/v2"
+	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/google/uuid"
+	"github.com/opentracing/opentracing-go"
+	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -17,6 +22,7 @@ import (
 	"shop_srvs/order_srv/initialize"
 	"shop_srvs/order_srv/proto"
 	"shop_srvs/order_srv/utils"
+	"shop_srvs/order_srv/utils/otgrpc"
 	"shop_srvs/order_srv/utils/register/consul"
 	"syscall"
 	"time"
@@ -24,7 +30,7 @@ import (
 
 func main() {
 	IP := flag.String("ip", "0.0.0.0", "ip地址")
-	Port := flag.Int("port", 50051, "端口号")
+	Port := flag.Int("port", 0, "端口号")
 	// 初始化
 	initialize.InitLogger()
 	initialize.InitConfig()
@@ -36,7 +42,26 @@ func main() {
 	}
 	zap.S().Infof("ip:%s,port:%d", *IP, *Port)
 
-	server := grpc.NewServer()
+	// 初始化jaegercfg
+	cfg := jaegercfg.Configuration{
+		Sampler: &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		},
+		Reporter: &jaegercfg.ReporterConfig{
+			LogSpans:           true,
+			LocalAgentHostPort: fmt.Sprintf("%s:%d", global.ServerConfig.JaegerInfo.Host, global.ServerConfig.JaegerInfo.Port),
+		},
+		ServiceName: global.ServerConfig.JaegerInfo.Name,
+	}
+	tracer, closer, err := cfg.NewTracer(jaegercfg.Logger(jaeger.StdLogger))
+	if err != nil {
+		panic(err)
+	}
+	opentracing.SetGlobalTracer(tracer)
+	defer closer.Close()
+
+	server := grpc.NewServer(grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(tracer)))
 	proto.RegisterOrderServer(server, &handler.OrderServer{})
 
 	// 注册服务健康检查
@@ -45,8 +70,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	//
-	//go testRedSync()
+
 	// 启动 gRPC 服务器
 	go func() {
 		if err := server.Serve(lis); err != nil {
@@ -63,10 +87,21 @@ func main() {
 	}
 	zap.S().Debugf("启动服务注册中心成功, 端口: %d", *Port)
 
+	// 监听订单超时topic
+	c, _ := rocketmq.NewPushConsumer(
+		consumer.WithNameServer([]string{"127.0.0.1:9876"}),
+		consumer.WithGroupName("shop-order"),
+	)
+	if err := c.Subscribe("order_timeout", consumer.MessageSelector{}, handler.OrderTimeout); err != nil {
+		fmt.Println("读取消息失败", err)
+	}
+	_ = c.Start()
+
 	//接收终止信号
 	quit := make(chan os.Signal)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	_ = c.Shutdown()
 	if err = register_client.DeRegister(serviceId); err != nil {
 		zap.S().Info("注销失败:", err.Error())
 	} else {
