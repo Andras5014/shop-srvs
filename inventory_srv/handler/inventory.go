@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"go.uber.org/zap"
@@ -151,6 +152,42 @@ func (i *InventoryServer) InvDetail(ctx context.Context, in *proto.GoodsInvInfo)
 //
 //	return &emptypb.Empty{}, nil
 //}
+
+func (i *InventoryServer) FastSell(ctx context.Context, in *proto.SellInfo) (*emptypb.Empty, error) {
+	if len(in.GoodsInfo) != 1 {
+		return nil, status.Errorf(codes.InvalidArgument, "秒杀活动只能涉及一件商品")
+	}
+	goodInfo := in.GoodsInfo[0]
+
+	// 使用 singleflight 防止多次请求同时处理同一商品
+	key := fmt.Sprintf("goods_%d", goodInfo.GoodsId)
+	_, err, _ := global.Sf.Do(key, func() (interface{}, error) {
+		// 获取分布式锁
+		mutex := global.Redsync.NewMutex(fmt.Sprintf("lock_goods_%d", goodInfo.GoodsId))
+		if err := mutex.LockContext(ctx); err != nil {
+			return nil, status.Errorf(codes.Internal, "无法获取商品ID %d 的锁: %v", goodInfo.GoodsId, err)
+		}
+		defer mutex.Unlock()
+
+		// 执行更新库存的 SQL 语句
+		result := global.DB.Exec("UPDATE inventories SET stocks = stocks - ? WHERE goods = ? AND stocks - ?>0", goodInfo.Num, goodInfo.GoodsId, goodInfo.Num)
+		if result.Error != nil {
+			return nil, status.Errorf(codes.Internal, "更新库存失败: %v", result.Error)
+		}
+		// 检查是否有行受影响，如果没有则说明库存不足
+		if result.RowsAffected == 0 {
+			return nil, status.Errorf(codes.ResourceExhausted, "库存不足，商品ID: %d", goodInfo.GoodsId)
+		}
+
+		return &emptypb.Empty{}, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
 
 // 全交给数据库
 func (i *InventoryServer) Sell(ctx context.Context, in *proto.SellInfo) (*emptypb.Empty, error) {

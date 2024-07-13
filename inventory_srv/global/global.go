@@ -2,6 +2,7 @@ package global
 
 import (
 	"github.com/go-redsync/redsync/v4"
+	"golang.org/x/sync/singleflight"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -16,6 +17,7 @@ var (
 	Redsync      *redsync.Redsync
 	ServerConfig *config.ServerConfig
 	NacosConfig  *config.NacosConfig
+	Sf           *singleflight.Group
 )
 
 func init() {
